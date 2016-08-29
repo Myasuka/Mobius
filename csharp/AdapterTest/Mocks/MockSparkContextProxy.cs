@@ -219,6 +219,7 @@ namespace AdapterTest.Mocks
                         SerDe.Write(ns, item.Length);
                         SerDe.Write(ns, item);
                     }
+                    ns.Flush();
                 }
             });
             return (listener.LocalEndPoint as IPEndPoint).Port;
@@ -246,6 +247,14 @@ namespace AdapterTest.Mocks
             get
             {
                 return accumuatorServerPort;
+            }
+        }
+
+        public IHadoopConfigurationProxy HadoopConfiguration
+        {
+            get
+            {
+                throw new NotImplementedException();
             }
         }
 

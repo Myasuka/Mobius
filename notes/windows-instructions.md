@@ -10,20 +10,19 @@ The following environment variables should be set properly in the Developer Comm
 
 * `JAVA_HOME`
 
-**To Be Noticed**: 
-Mobius on Windows includes a C++ component - RIOSock.dll. If your environment does not have VC++ Build Toolset installed, the C++ component will be skipped to compile. Offically, the C++ component is always compiled on AppVeyor.
-Please enable VC++ component from Visual Studio, or you can download [Visual C++ Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools), if you want to build C++ components.
+**Note**:
+Mobius includes a C++ component (RIOSock.dll) for leveraging the socket optimization available in Windows. If your build environment does not have VC++ Build Toolset installed, [RIOSock project](../cpp/Riosock) will be skipped during the build. This is an optional component and Mobius will be fully functional even without this component (socket optimization will be unavaiable though). You need to enable VC++ project type in Visual Studio, or install [Visual C++ Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools), if you want to build C++ components. Mobius releases include RIOSock.dll.
 
 ## Instructions
 
-* In the Developer Command Prompt for Visual Studio where `JAVA_HOME` is set properly, navigate to [Mobius\build](../build/) directory: 
+* In the Developer Command Prompt for Visual Studio where `JAVA_HOME` is set properly, navigate to [Mobius\build](../build/) directory:
 
 	```  
 	Build.cmd  
 	```
 
-* Optional: 
-	- Under [Mobius\scala](../scala) directory, run the following command to clean spark-clr*.jar built above: 
+* Optional:
+	- Under [Mobius\scala](../scala) directory, run the following command to clean spark-clr*.jar built above:
 
 		```  
 		mvn clean
@@ -34,20 +33,24 @@ Please enable VC++ component from Visual Studio, or you can download [Visual C++
 		```  
 		Clean.cmd  
 		```  
-		
+
 [Build.cmd](../build/Build.cmd) downloads necessary build tools; after the build is done, it prepares the folowing directories under `Mobius\build\runtime`:
 
-  * **lib** ( `spark-clr*.jar` )  
-  * **bin** ( `Microsoft.Spark.CSharp.Adapter.dll`, `CSharpWorker.exe`)  
-  * **samples** ( The contents of `Mobius\csharp\Samples\Microsoft.Spark.CSharp\bin\Release\*`, including `Microsoft.Spark.CSharp.Adapter.dll`, `CSharpWorker.exe`, `SparkCLRSamples.exe`, `SparkCLRSamples.exe.Config` etc. ) 
-  * **scripts** ( `sparkclr-submit.cmd` )  
-  * **data** ( `Mobius\csharp\Samples\Microsoft.Spark.CSharp\data\*` )    
+ 
+  * **bin** ( `Microsoft.Spark.CSharp.Adapter.dll`, `CSharpWorker.exe`)
+  * **data** ( `Mobius\csharp\Samples\Microsoft.Spark.CSharp\data\*` ) 
+  * **dependencies** (jar files Mobius functionality depends on)
+  * **lib** ( `spark-clr*.jar` ) 
+  * **repl** (components required for REPL functionality in Mobius)
+  * **samples** ( The contents of `Mobius\csharp\Samples\Microsoft.Spark.CSharp\bin\Release\*`, including `Microsoft.Spark.CSharp.Adapter.dll`, `CSharpWorker.exe`, `SparkCLRSamples.exe`, `SparkCLRSamples.exe.Config` etc. )
+  * **scripts** ( `sparkclr-submit.cmd`, `sparkclr-submit.sh`, `sparclr-shell.cmd` )  
+ 
 
 # Running Unit Tests
 
 * In Visual Studio: Install NUnit3 Test Adapter. Run the tests through "Test" -> "Run" -> "All Tests"
 
-* Install NUnit Runner 3.0 or above using NuGet (see [https://www.nuget.org/packages/NUnit.Runners/](https://www.nuget.org/packages/NUnit.Runners/)). In Developer Command Prompt for VS, set `NUNITCONSOLE` to the path to nunit console, and navigate to `Mobius\csharp` and run the following command: 
+* Install NUnit Runner 3.0 or above using NuGet (see [https://www.nuget.org/packages/NUnit.Runners/](https://www.nuget.org/packages/NUnit.Runners/)). In Developer Command Prompt for VS, set `NUNITCONSOLE` to the path to nunit console, and navigate to `Mobius\csharp` and run the following command:
     ```
     Test.cmd
     ```
@@ -59,7 +62,7 @@ Samples demonstrate comprehesive usage of Mobius API and also serve as functiona
 * [YARN cluster](#running-in-yarn-mode)
 * [Local mode dev environment](#running-in-local-mode-dev-environment) (using artifacts built in the local Git repo)
 
-The prerequisites for running Mobius samples are same as the ones for running any other Mobius applications. Refer to [instructions](.\running-mobius-app.md#pre-requisites) for details on that. [Local mode dev environment](#running-in-local-mode-dev-environment) makes it easier to run samples in dev environment by downloading Spark.
+The prerequisites for running Mobius samples are same as the ones for running any other Mobius applications. Refer to [instructions](./running-mobius-app.md#pre-requisites) for details on that. [Local mode dev environment](#running-in-local-mode-dev-environment) makes it easier to run samples in dev environment by downloading Spark.
 
 ## Running in Local mode
 ```
@@ -91,7 +94,7 @@ It is **required** to run [Build.cmd](../build/Build.cmd) prior to running [RunS
 [RunSamples.cmd](../build/localmode/RunSamples.cmd) downloads the version of Apache Spark referenced in the current branch, sets up `SPARK_HOME` environment variable, points `SPARKCLR_HOME` to `Mobius\build\runtime` directory created by [Build.cmd](../build/Build.cmd), and invokes [sparkclr-submit.cmd](../scripts/sparkclr-submit.cmd), with `spark.local.dir` set to `Mobius\build\runtime\Temp`.
 
 A few more [RunSamples.cmd](../build/localmode/RunSamples.cmd) examples:
-- To display all options supported by [RunSamples.cmd](../build/localmode/RunSamples.cmd): 
+- To display all options supported by [RunSamples.cmd](../build/localmode/RunSamples.cmd):
 
     ```  
     RunSamples.cmd  --help

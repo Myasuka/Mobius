@@ -21,9 +21,13 @@ namespace Microsoft.Spark.CSharp.Configuration
         public const string CSharpWorkerPathSettingKey = "CSharpWorkerPath";
         public const string CSharpBackendPortNumberSettingKey = "CSharpBackendPortNumber";
         public const string CSharpSocketTypeEnvName = "spark.mobius.CSharp.socketType";
+        public const string CSharpWorkerReadBufferSizeEnvName = "spark.mobius.CSharpWorker.readBufferSize";
+        public const string CSharpWorkerWriteBufferSizeEnvName = "spark.mobius.CSharpWorker.writeBufferSize";
+        public const string ExecutorCoresEnvName = "spark.executor.cores";
         public const string SPARKCLR_HOME = "SPARKCLR_HOME";
         public const string SPARK_MASTER = "spark.master";
         public const string CSHARPBACKEND_PORT = "CSHARPBACKEND_PORT";
+        public const int CSHARPBACKEND_DEBUG_PORT = 5567;
 
         private readonly ILoggerService logger = LoggerServiceFactory.GetLogger(typeof(ConfigurationService));
         private readonly SparkCLRConfiguration configuration;
@@ -178,13 +182,21 @@ namespace Microsoft.Spark.CSharp.Configuration
 
             internal override int GetPortNumber()
             {
+                int cSharpBackendPortNumber = CSHARPBACKEND_DEBUG_PORT;
                 KeyValueConfigurationElement portConfig = appSettings.Settings[CSharpBackendPortNumberSettingKey];
                 if (portConfig == null)
                 {
-                    throw new ConfigurationErrorsException(string.Format("Need to set {0} value in App.config for running in DEBUG mode.", CSharpBackendPortNumberSettingKey));
+                    logger.LogInfo(
+                        string.Format(
+                            "Port number not set using setting {0} in App.config. Using default port {1} to connect to CSharpBackend",
+                            CSharpBackendPortNumberSettingKey, cSharpBackendPortNumber));
                 }
-                int cSharpBackendPortNumber = int.Parse(portConfig.Value);
-                logger.LogInfo(string.Format("CSharpBackend port number read from app config {0}", cSharpBackendPortNumber));
+                else
+                {
+                    cSharpBackendPortNumber = int.Parse(portConfig.Value);
+                    logger.LogInfo(string.Format("CSharpBackend port number read from app config {0}. Using it to connect to CSharpBackend", cSharpBackendPortNumber));
+                }
+                
                 return cSharpBackendPortNumber;
             }
 
@@ -199,7 +211,7 @@ namespace Microsoft.Spark.CSharp.Configuration
                     logger.LogInfo("Worker path read from setting {0} in app config", CSharpWorkerPathSettingKey);
                     return workerPathConfig.Value;
                 }
-                
+
                 var path = GetSparkCLRArtifactsPath("bin", ProcFileName);
                 logger.LogInfo("Worker path {0} constructed using {1} environment variable", path, SPARKCLR_HOME);
 

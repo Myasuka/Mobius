@@ -2,11 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using Microsoft.Spark.CSharp.Configuration;
 using Microsoft.Spark.CSharp.Interop.Ipc;
 using Microsoft.Spark.CSharp.Network;
 using Microsoft.Spark.CSharp.Services;
 
+[assembly: InternalsVisibleTo("WorkerTest")]
 namespace Microsoft.Spark.CSharp
 {
     /// <summary>
@@ -15,49 +19,50 @@ namespace Microsoft.Spark.CSharp
     /// </summary>
     internal class TaskRunner
     {
-        private static ILoggerService logger = null;
-        private ILoggerService Logger
+        private static ILoggerService logger;
+        private static ILoggerService Logger
         {
             get
             {
-                if (logger == null)
-                {
-                    logger = LoggerServiceFactory.GetLogger(typeof(TaskRunner));
-                }
+                if (logger != null) return logger;
+                logger = LoggerServiceFactory.GetLogger(typeof(TaskRunner));
                 return logger;
             }
         }
 
-        public int trId;  // task runner Id
-        private ISocketWrapper socket;  // socket to communicate with JVM
+        private readonly ISocketWrapper socket;  // Socket to communicate with JVM
+        private volatile bool stop;
+        private readonly bool socketReuse; // whether the socket can be reused to run multiple Spark tasks
 
-        private volatile bool stop = false;
-
-        // whether the socket can be reused to run multiple Spark tasks
-        private bool socketReuse;
+        /// <summary>
+        /// Task runner Id
+        /// </summary>
+        public int TaskId { get; private set; }
 
         public TaskRunner(int trId, ISocketWrapper socket, bool socketReuse)
         {
-            this.trId = trId;
+            TaskId = trId;
             this.socket = socket;
             this.socketReuse = socketReuse;
         }
 
         public void Run()
         {
-            Logger.LogInfo(string.Format("TaskRunner [{0}] is running ...", trId));
+            Logger.LogInfo("TaskRunner [{0}] is running ...", TaskId);
 
             try
             {
                 while (!stop)
                 {
-                    using (var networkStream = socket.GetStream())
+                    using (var inputStream = socket.GetInputStream())
+                    using (var outputStream = socket.GetOutputStream())
                     {
-                        byte[] bytes = SerDe.ReadBytes(networkStream, sizeof(int));
+                        byte[] bytes = SerDe.ReadBytes(inputStream, sizeof(int));
                         if (bytes != null)
                         {
                             int splitIndex = SerDe.ToInt(bytes);
-                            bool readComplete = Worker.ProcessStream(networkStream, splitIndex);
+                            bool readComplete = Worker.ProcessStream(inputStream, outputStream, splitIndex);
+                            outputStream.Flush();
                             if (!readComplete) // if the socket is not read through completely, then it can't be reused
                             {
                                 stop = true;
@@ -72,7 +77,7 @@ namespace Microsoft.Spark.CSharp
                                 // Use SerDe.ReadBytes() to detect java side has closed socket properly
                                 // ReadBytes() will block until the socket is closed
                                 Logger.LogInfo("waiting JVM side to close socket...");
-                                SerDe.ReadBytes(networkStream);
+                                SerDe.ReadBytes(inputStream);
                                 Logger.LogInfo("JVM side has closed socket");
                             }
                         }
@@ -87,7 +92,7 @@ namespace Microsoft.Spark.CSharp
             catch (Exception e)
             {
                 stop = true;
-                Logger.LogError(string.Format("TaskRunner [{0}] exeption, will dispose this TaskRunner", trId));
+                Logger.LogError("TaskRunner [{0}] exeption, will dispose this TaskRunner", TaskId);
                 Logger.LogException(e);
             }
             finally
@@ -98,15 +103,15 @@ namespace Microsoft.Spark.CSharp
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarn(string.Format("close socket exception: ex", ex));
+                    Logger.LogWarn("close socket exception: {0}", ex);
                 }
-                Logger.LogInfo(string.Format("TaskRunner [{0}] finished", trId));
+                Logger.LogInfo("TaskRunner [{0}] finished", TaskId);
             }
         }
 
         public void Stop()
         {
-            Logger.LogInfo(string.Format("try to stop TaskRunner [{0}]", trId));
+            Logger.LogInfo("try to stop TaskRunner [{0}]", TaskId);
             stop = true;
         }
     }
